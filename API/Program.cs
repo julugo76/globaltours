@@ -1,3 +1,4 @@
+using API.Helpers;
 using Core.Interfaces;
 using Infrastructure.Datos;
 using Microsoft.EntityFrameworkCore;
@@ -21,8 +22,9 @@ builder.Services.AddDbContext<ApplicationDbContext>(options =>
 
 //SERVICES
 builder.Services.AddScoped<ILugarRepositorio, LugarRepositorio>();
+builder.Services.AddScoped(typeof(IRepositorio<>),(typeof(Repositorio<>)));
 
-
+builder.Services.AddAutoMapper(typeof(MappingProfiles));
 
 
 var app = builder.Build();
@@ -56,6 +58,8 @@ if (app.Environment.IsDevelopment())
 }
 
 app.UseHttpsRedirection();
+
+app.UseStaticFiles();
 
 app.UseAuthorization();
 
