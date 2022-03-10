@@ -1,6 +1,9 @@
+using API.Errores;
 using API.Helpers;
+using API.Middleware;
 using Core.Interfaces;
 using Infrastructure.Datos;
+using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -22,12 +25,30 @@ builder.Services.AddDbContext<ApplicationDbContext>(options =>
 
 //SERVICES
 builder.Services.AddScoped<ILugarRepositorio, LugarRepositorio>();
-builder.Services.AddScoped(typeof(IRepositorio<>),(typeof(Repositorio<>)));
+builder.Services.AddScoped(typeof(IRepositorio<>), (typeof(Repositorio<>)));
 
 builder.Services.AddAutoMapper(typeof(MappingProfiles));
 
+builder.Services.Configure<ApiBehaviorOptions>(options =>
+{
+    options.InvalidModelStateResponseFactory = actionContext =>
+    {
+        var errors = actionContext.ModelState
+        .Where(e => e.Value.Errors.Count > 0)
+        .SelectMany(x => x.Value.Errors)
+        .Select(x => x.ErrorMessage).ToArray();
+        var errorresponse = new ApiValidationErrorResponse
+        {
+            Errors = errors
+        };
+        return new BadRequestObjectResult(errorresponse);
+    };
+});
 
 var app = builder.Build();
+
+//
+app.UseMiddleware<ExceptionMiddleware>();
 
 //Configurar deteccion de cambios en migrations al ejecutar la app y alimentar la BD
 using (var scope = app.Services.CreateScope())
@@ -56,6 +77,9 @@ if (app.Environment.IsDevelopment())
     app.UseSwagger();
     app.UseSwaggerUI();
 }
+
+//pipeline errors
+app.UseStatusCodePagesWithReExecute("/errors/{0}");
 
 app.UseHttpsRedirection();
 
